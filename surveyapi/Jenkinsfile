@@ -1,0 +1,30 @@
+// authored by : Rahul Sharma
+// Jenkins pipeline
+pipeline{
+    agent any
+    environment{
+        DOCKERHUB_PASS = credentials('password_docker')
+    }
+    stages{
+        stage("Checkout"){
+            steps{
+                checkout scm
+                sh 'ls -al'
+                sh 'pwd'
+                sh("cd surveyapi && sudo -S docker build --tag mpremashish1/surveyapi:${BUILD_TIMESTAMP} .")
+                sh("cd surveyapi && echo ${BUILD_TIMESTAMP}")
+                sh('cd surveyapi && sudo docker login -u mpremashish1 -p \"${DOCKERHUB_PASS}\"')
+            }
+        }
+        stage("Push docker image"){
+            steps{
+                sh("sudo docker push mpremashish1/surveyapi:${BUILD_TIMESTAMP}")
+            }
+        }
+        stage("Deploy docker image to rancher cluster with 3 pod using nodeport"){
+            steps{
+                sh("kubectl set image deployment/surveyapidep container-0=mpremashish1/surveyapi:${BUILD_TIMESTAMP} -n default")
+            }
+        }
+    }
+}
